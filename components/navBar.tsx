@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useDesignSystem } from "../contexts/DesignSystemContext";
 import { useScroll } from "../contexts/ScrollContext";
+import { useLoader } from "../contexts/LoaderContext";
+import { useOverlay } from "../contexts/OverlayContext";
 
 export default function NavBar({
   state,
@@ -15,6 +17,8 @@ export default function NavBar({
   const insets = useSafeAreaInsets();
   const { design } = useDesignSystem();
   const { isNavBarVisible } = useScroll();
+  const { showLoader, hideLoader } = useLoader();
+  const { showConfirm, showToast } = useOverlay();
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -38,9 +42,25 @@ export default function NavBar({
 
   const handleActionButton = () => {
     if (currentRouteName === "a") {
-      console.log("Plus pressed");
+      showLoader();
+      setTimeout(() => {
+        hideLoader();
+        showToast("Successfully added!", "success");
+        console.log("Plus pressed");
+      }, 1500);
     } else {
-      console.log("Sign out pressed");
+      showConfirm(
+        "Sign Out",
+        "Are you sure you want to sign out?",
+        () => {
+          showLoader();
+          setTimeout(() => {
+            hideLoader();
+            showToast("Signed out successfully");
+            console.log("Sign out confirmed");
+          }, 1500);
+        }
+      );
     }
   };
 

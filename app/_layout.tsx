@@ -7,6 +7,8 @@ import {
   useDesignSystem,
 } from "../contexts/DesignSystemContext";
 import { ScrollProvider } from "../contexts/ScrollContext";
+import { LoaderProvider } from "../contexts/LoaderContext";
+import { OverlayProvider } from "../contexts/OverlayContext";
 import {
   useFonts,
   ComicNeue_400Regular,
@@ -22,15 +24,13 @@ function RootLayoutNav() {
 
   return (
     <ScrollProvider>
-      <PaperProvider theme={theme}>
-        <StatusBar style={isDarkMode ? "light" : "dark"} />
-        <SafeAreaView
-          edges={["top"]}
-          style={{ flex: 1, backgroundColor: theme.colors.background }}
-        >
-          <Stack screenOptions={{ headerShown: false }} />
-        </SafeAreaView>
-      </PaperProvider>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      <SafeAreaView
+        edges={["top"]}
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+      >
+        <Stack screenOptions={{ headerShown: false }} />
+      </SafeAreaView>
     </ScrollProvider>
   );
 }
@@ -54,8 +54,24 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <DesignSystemProvider>
-        <RootLayoutNav />
+        {/* PaperProvider MUST wrap everything that uses Paper components, including Contexts that render Paper Portal elements */}
+        <PaperContextWrapper />
       </DesignSystemProvider>
     </SafeAreaProvider>
+  );
+}
+
+// Separate component to access the theme from DesignSystemProvider
+function PaperContextWrapper() {
+  const { theme } = useDesignSystem();
+  
+  return (
+    <PaperProvider theme={theme}>
+      <LoaderProvider>
+        <OverlayProvider>
+          <RootLayoutNav />
+        </OverlayProvider>
+      </LoaderProvider>
+    </PaperProvider>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, Animated, Easing } from "react-native";
+import { View, Animated, Easing, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, Text, useTheme } from "react-native-paper";
 import { useDesignSystem } from "../contexts/DesignSystemContext";
@@ -8,8 +8,11 @@ export default function Index() {
   const theme = useTheme();
   const router = useRouter();
   const { design } = useDesignSystem();
+
+  const screenWidth = Dimensions.get("window").width;
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateAnim = useRef(new Animated.Value(20)).current;
+  const translateAnim = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -35,17 +38,18 @@ export default function Index() {
           useNativeDriver: true,
         }),
         Animated.timing(translateAnim, {
-          toValue: -20,
+          toValue: -screenWidth * 0.3,
           duration: 300,
+          easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
       ]).start(() => {
         router.replace("/a");
       });
-    }, 1200);
+    }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [router]);
+  }, [router, screenWidth]);
 
   return (
     <View
@@ -59,7 +63,7 @@ export default function Index() {
       <Animated.View
         style={{
           opacity: fadeAnim,
-          transform: [{ translateY: translateAnim }],
+          transform: [{ translateX: translateAnim }],
         }}
       >
         <View
