@@ -45,7 +45,7 @@ export default function Home() {
   const onDismissSnackBar = () => setSnackbarVisible(false);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
         ref={scrollRef}
         onScroll={handleScroll}
@@ -54,7 +54,6 @@ export default function Home() {
         alwaysBounceVertical={false}
         style={{
           flex: 1,
-          backgroundColor: theme.colors.background,
         }}
         contentContainerStyle={{
           paddingTop: design.spacing.md,
@@ -65,6 +64,7 @@ export default function Home() {
           style={{
             gap: design.spacing.xs,
             paddingHorizontal: design.spacing.md,
+            paddingBottom: design.spacing.md
           }}
         >
           <View
