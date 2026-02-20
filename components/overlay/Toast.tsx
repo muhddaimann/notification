@@ -1,135 +1,189 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated, TouchableOpacity } from 'react-native';
-import { useTheme, Text, Surface } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from "react";
+import { View, Animated, Easing, Pressable } from "react-native";
+import { Text, Surface, IconButton, Button } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useDesignSystem } from "../../contexts/DesignSystemContext";
+import { ToastOptions } from "../../contexts/OverlayContext";
 
-type ToastProps = {
+interface ToastUIProps {
   visible: boolean;
-  message: string;
-  type: 'info' | 'success' | 'error';
-  duration?: number;
-  onDismiss: () => void;
-};
+  state: ToastOptions;
+}
 
-export default function Toast({ visible, message, type, duration = 3000, onDismiss }: ToastProps) {
-  const theme = useTheme();
-  const [shouldRender, setShouldRender] = useState(visible);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
+export const ToastUI: React.FC<ToastUIProps> = ({ visible, state }) => {
+  const { theme, design } = useDesignSystem();
+  const insets = useSafeAreaInsets();
+
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(-24)).current;
+  const scale = useRef(new Animated.Value(0.98)).current;
+
+  const [activeState, setActiveState] = useState<ToastOptions>(state);
+  const [rendered, setRendered] = useState(false);
+
+  const variant = activeState.variant ?? "info";
+
+  const config = (() => {
+    switch (variant) {
+      case "success":
+        return { color: theme.colors.tertiary, icon: "check-circle" };
+      case "error":
+        return { color: theme.colors.error, icon: "close-circle" };
+      case "warning":
+        return { color: theme.colors.secondary, icon: "alert-circle" };
+      case "info":
+      default:
+        return { color: theme.colors.primary, icon: "information" };
+    }
+  })();
+
+  const animateIn = () => {
+    opacity.setValue(0);
+    translateY.setValue(-24);
+    scale.setValue(0.98);
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const animateOut = (cb?: () => void) => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: -24,
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.98,
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(cb);
+  };
 
   useEffect(() => {
     if (visible) {
-      setShouldRender(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      const timer = setTimeout(() => {
-        onDismiss();
-      }, duration);
-
-      return () => clearTimeout(timer);
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 20,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setShouldRender(false));
+      setActiveState(state);
+      setRendered(true);
+      animateIn();
+    } else if (rendered) {
+      animateOut(() => setRendered(false));
     }
-  }, [visible, duration, onDismiss]);
+  }, [visible, state]);
 
-  if (!shouldRender) return null;
-
-  const getBackgroundColor = () => {
-    switch (type) {
-      case 'success':
-        return '#4CAF50';
-      case 'error':
-        return theme.colors.error;
-      default:
-        return theme.colors.onSurfaceVariant;
-    }
-  };
-
-  const getIcon = () => {
-    switch (type) {
-      case 'success':
-        return 'check-circle';
-      case 'error':
-        return 'alert-circle';
-      default:
-        return 'information';
-    }
-  };
+  if (!rendered) return null;
 
   return (
-    <Animated.View
+    <View
+      pointerEvents="box-none"
       style={{
-        position: 'absolute',
-        top: 10,
-        left: 16,
-        right: 16,
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-        zIndex: 10000,
+        position: "absolute",
+        top: insets.top + design.spacing.sm,
+        left: design.spacing.lg,
+        right: design.spacing.lg,
+        zIndex: 9999,
       }}
-      pointerEvents={visible ? 'auto' : 'none'}
     >
-      <TouchableOpacity activeOpacity={0.9} onPress={onDismiss}>
-        <Surface
-          elevation={4}
-          style={{
-            backgroundColor: getBackgroundColor(),
-            borderRadius: 16,
-            padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <MaterialCommunityIcons name={getIcon()} size={22} color="white" />
-            <Text 
-              style={{ 
-                color: 'white', 
-                fontFamily: 'ComicNeue_700Bold',
-                marginLeft: 12,
-                fontSize: 15,
-                flex: 1
-              }}
-            >
-              {message}
-            </Text>
-          </View>
-          <Text 
-            style={{ 
-              color: 'white', 
-              fontFamily: 'ComicNeue_700Bold',
-              fontSize: 12,
-              opacity: 0.8,
-              marginLeft: 8
+      <Animated.View
+        style={{
+          opacity,
+          transform: [{ translateY }, { scale }],
+        }}
+      >
+        <Pressable>
+          <Surface
+            style={{
+              borderRadius: design.radii.xl,
+              backgroundColor: theme.colors.surface,
+              paddingHorizontal: design.spacing.lg,
+              paddingVertical: design.spacing.md,
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: config.color + "33",
+              shadowColor: config.color,
+              shadowOpacity: 0.15,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
             }}
           >
-            DISMISS
-          </Text>
-        </Surface>
-      </TouchableOpacity>
-    </Animated.View>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: config.color + "15",
+                marginRight: design.spacing.sm,
+              }}
+            >
+              <IconButton
+                icon={config.icon}
+                iconColor={config.color}
+                size={18}
+                style={{ margin: 0 }}
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                variant="bodyMedium"
+                numberOfLines={2}
+                style={{
+                  color: theme.colors.onSurface,
+                  lineHeight: 20,
+                  fontWeight: "600",
+                }}
+              >
+                {activeState.message}
+              </Text>
+            </View>
+
+            {activeState.actionLabel && activeState.onAction && (
+              <Button
+                mode="text"
+                onPress={activeState.onAction}
+                textColor={config.color}
+                compact
+                style={{ marginLeft: design.spacing.sm }}
+                labelStyle={{
+                  fontSize: 12,
+                  fontWeight: "700",
+                }}
+              >
+                {activeState.actionLabel}
+              </Button>
+            )}
+          </Surface>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
-}
+};

@@ -8,9 +8,7 @@ export default function Index() {
   const theme = useTheme();
   const router = useRouter();
   const { design } = useDesignSystem();
-
   const screenWidth = Dimensions.get("window").width;
-
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(40)).current;
 

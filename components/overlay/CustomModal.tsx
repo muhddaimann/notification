@@ -1,44 +1,42 @@
-import React from 'react';
-import { View, TouchableWithoutFeedback } from 'react-native';
-import { Surface, useTheme } from 'react-native-paper';
+import React from "react";
+import { View, StyleSheet, Pressable } from "react-native";
+import { Surface } from "react-native-paper";
+import { ModalOptions } from "../../contexts/OverlayContext";
+import { useDesignSystem } from "../../contexts/DesignSystemContext";
 
-type CustomModalProps = {
-  content: React.ReactNode;
+interface ModalUIProps {
+  state: ModalOptions | null;
   onDismiss: () => void;
-};
+}
 
-export default function CustomModal({ content, onDismiss }: CustomModalProps) {
-  const theme = useTheme();
+export const ModalUI: React.FC<ModalUIProps> = ({ state, onDismiss }) => {
+  const { theme, design } = useDesignSystem();
+
+  if (!state) return null;
 
   return (
-    <TouchableWithoutFeedback onPress={onDismiss}>
-      <View 
-        style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: 24,
-        }}
+    <Pressable style={{ width: "100%" }}>
+      <Surface
+        elevation={5}
+        style={[
+          styles.container,
+          { 
+            backgroundColor: theme.colors.surface,
+            padding: design.spacing.xl,
+            borderRadius: design.radii.lg,
+          },
+        ]}
       >
-        <TouchableWithoutFeedback>
-          <Surface 
-            elevation={4} 
-            style={{ 
-              padding: 32,
-              width: '100%',
-              maxWidth: 420,
-              gap: 16,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              backgroundColor: theme.colors.surface, 
-              borderRadius: 28 
-            }}
-          >
-            {content}
-          </Surface>
-        </TouchableWithoutFeedback>
-      </View>
-    </TouchableWithoutFeedback>
+        <View style={{ width: "100%" }}>{state.content}</View>
+      </Surface>
+    </Pressable>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    minWidth: 280,
+    maxWidth: 560,
+    alignSelf: "center",
+  },
+});

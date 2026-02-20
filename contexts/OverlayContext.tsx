@@ -1,180 +1,283 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
-import { View, StyleSheet, Animated, BackHandler } from "react-native";
-import AlertConfirm from "../components/overlay/AlertConfirm";
-import CustomModal from "../components/overlay/CustomModal";
-import Toast from "../components/overlay/Toast";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { StyleSheet, View, Pressable } from "react-native";
 
-type OverlayType = "alert" | "confirm" | "modal" | "none";
+export type Variant = "neutral" | "info" | "success" | "warning" | "error";
 
-type OverlayConfig = {
-  type: OverlayType;
+export type AlertOptions = {
   title?: string;
   message?: string;
-  onConfirm?: () => void;
-  onCancel?: () => void;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  content?: React.ReactNode;
+  variant?: Variant;
 };
 
-type ToastConfig = {
+export type ConfirmOptions = {
+  title?: string;
+  message?: string;
+  okText?: string;
+  cancelText?: string;
+  variant?: Variant;
+};
+
+export type ToastOptions = {
   message: string;
-  type: "info" | "success" | "error";
   duration?: number;
+  actionLabel?: string;
+  onAction?: () => void;
+  variant?: Variant;
 };
 
-type OverlayContextType = {
-  showAlert: (title: string, message: string, onConfirm?: () => void) => void;
-  showConfirm: (
-    title: string, 
-    message: string, 
-    onConfirm: () => void, 
-    onCancel?: () => void,
-    confirmLabel?: string,
-    cancelLabel?: string
-  ) => void;
-  showModal: (content: React.ReactNode) => void;
-  showToast: (message: string, type?: "info" | "success" | "error", duration?: number) => void;
-  hideOverlay: () => void;
+export type ModalOptions = {
+  content: React.ReactNode;
+  dismissible?: boolean;
 };
 
-const OverlayContext = createContext<OverlayContextType | undefined>(undefined);
+export type OverlayContextValue = {
+  alert: (opts: AlertOptions) => void;
+  dismissAlert: () => void;
 
-export const OverlayProvider: React.FC<{ children: React.ReactNode }> = ({
+  confirm: (opts: ConfirmOptions) => Promise<boolean>;
+  destructiveConfirm: (opts: ConfirmOptions) => Promise<boolean>;
+  dismissConfirm: () => void;
+
+  toast: (opts: ToastOptions | string) => void;
+
+  modal: (opts: ModalOptions) => void;
+  dismissModal: () => void;
+};
+
+export const OverlayContext = createContext<OverlayContextValue | null>(null);
+
+export function OverlayProvider({
   children,
-}) => {
-  const [config, setConfig] = useState<OverlayConfig>({ type: "none" });
-  const [toast, setToast] = useState<ToastConfig | null>(null);
-  
-  // Track visibility for components to handle their own exit animations
-  const [isDialogVisible, setIsDialogVisible] = useState(false);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  AlertUI,
+  ConfirmUI,
+  ToastUI,
+  ModalUI,
+}: {
+  children: React.ReactNode;
+  AlertUI: React.FC<{
+    state: AlertOptions | null;
+    onDismiss: () => void;
+  }>;
+  ConfirmUI: React.FC<{
+    state: ConfirmOptions | null;
+    onOk: () => void;
+    onCancel: () => void;
+  }>;
+  ToastUI: React.FC<{
+    visible: boolean;
+    state: ToastOptions;
+  }>;
+  ModalUI: React.FC<{
+    state: ModalOptions | null;
+    onDismiss: () => void;
+  }>;
+}) {
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertState, setAlertState] = useState<AlertOptions | null>(null);
 
-  useEffect(() => {
-    if (isModalVisible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmOptions | null>(null);
+  const confirmResolver = useRef<((v: boolean) => void) | null>(null);
 
-      const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-        hideOverlay();
-        return true;
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastState, setToastState] = useState<ToastOptions>({
+    message: "",
+  });
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalState, setModalState] = useState<ModalOptions | null>(null);
+
+  const alert = useCallback((opts: AlertOptions) => {
+    setAlertState({
+      title: opts.title ?? "Notice",
+      message: opts.message ?? "",
+      variant: opts.variant,
+    });
+    setAlertVisible(true);
+  }, []);
+
+  const dismissAlert = useCallback(() => {
+    setAlertVisible(false);
+    setAlertState(null);
+  }, []);
+
+  const confirm = useCallback((opts: ConfirmOptions) => {
+    return new Promise<boolean>((resolve) => {
+      confirmResolver.current = resolve;
+      setConfirmState({
+        title: opts.title ?? "Are you sure?",
+        message: opts.message ?? "",
+        okText: opts.okText ?? "OK",
+        cancelText: opts.cancelText ?? "Cancel",
+        variant: opts.variant ?? "neutral",
       });
-      return () => backHandler.remove();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isModalVisible]);
-
-  const showAlert = useCallback((title: string, message: string, onConfirm?: () => void) => {
-    setConfig({ type: "alert", title, message, onConfirm });
-    setIsDialogVisible(true);
+      setConfirmVisible(true);
+    });
   }, []);
 
-  const showConfirm = useCallback((
-    title: string, 
-    message: string, 
-    onConfirm: () => void, 
-    onCancel?: () => void,
-    confirmLabel = "Confirm",
-    cancelLabel = "Cancel"
-  ) => {
-    setConfig({ type: "confirm", title, message, onConfirm, onCancel, confirmLabel, cancelLabel });
-    setIsDialogVisible(true);
+  const destructiveConfirm = useCallback(
+    (opts: ConfirmOptions) =>
+      confirm({
+        ...opts,
+        variant: opts.variant ?? "error",
+        okText: opts.okText ?? "Delete",
+      }),
+    [confirm]
+  );
+
+  const dismissConfirm = useCallback(() => {
+    setConfirmVisible(false);
+    setConfirmState(null);
   }, []);
 
-  const showModal = useCallback((content: React.ReactNode) => {
-    setConfig({ type: "modal", content });
-    setIsModalVisible(true);
+  const onConfirmOk = useCallback(() => {
+    setConfirmVisible(false);
+    const resolve = confirmResolver.current;
+    confirmResolver.current = null;
+    setConfirmState(null);
+    resolve?.(true);
   }, []);
 
-  const showToast = useCallback((message: string, type: "info" | "success" | "error" = "info", duration = 3000) => {
-    setToast({ message, type, duration });
+  const onConfirmCancel = useCallback(() => {
+    setConfirmVisible(false);
+    const resolve = confirmResolver.current;
+    confirmResolver.current = null;
+    setConfirmState(null);
+    resolve?.(false);
   }, []);
 
-  const hideOverlay = useCallback(() => {
-    setIsDialogVisible(false);
-    setIsModalVisible(false);
+  const toast = useCallback((opts: ToastOptions | string) => {
+    const next = typeof opts === "string" ? { message: opts } : opts;
     
-    // We don't reset the config immediately to allow exit animations to finish
-    // with the existing data (title, message, etc.)
-    setTimeout(() => {
-      setConfig(prev => {
-        // Only clear if no new overlay was shown during the timeout
-        if (!isDialogVisible && !isModalVisible) {
-          return { type: "none" };
-        }
-        return prev;
-      });
-    }, 300); // Wait for exit animations
-  }, [isDialogVisible, isModalVisible]);
+    // Clear existing timer if any
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
 
-  const handleConfirm = () => {
-    if (config.onConfirm) config.onConfirm();
-    hideOverlay();
-  };
+    setToastState({
+      message: next.message,
+      duration: next.duration ?? 2500,
+      actionLabel: next.actionLabel,
+      onAction: next.onAction,
+      variant: next.variant,
+    });
+    setToastVisible(true);
 
-  const handleCancel = () => {
-    if (config.onCancel) config.onCancel();
-    hideOverlay();
-  };
+    // Auto dismiss
+    toastTimerRef.current = setTimeout(() => {
+      setToastVisible(false);
+      toastTimerRef.current = null;
+    }, next.duration ?? 2500);
+  }, []);
+
+  const modal = useCallback((opts: ModalOptions) => {
+    setModalState(opts);
+    setModalVisible(true);
+  }, []);
+
+  const dismissModal = useCallback(() => {
+    setModalVisible(false);
+    setModalState(null);
+  }, []);
+
+  const isBackdropVisible = alertVisible || confirmVisible || modalVisible;
+
+  const handleBackdropPress = useCallback(() => {
+    if (alertVisible) dismissAlert();
+    else if (confirmVisible) onConfirmCancel();
+    else if (modalVisible && modalState?.dismissible !== false) dismissModal();
+  }, [
+    alertVisible,
+    confirmVisible,
+    modalVisible,
+    modalState,
+    dismissAlert,
+    onConfirmCancel,
+    dismissModal,
+  ]);
+
+  const value = useMemo<OverlayContextValue>(
+    () => ({
+      alert,
+      dismissAlert,
+      confirm,
+      destructiveConfirm,
+      dismissConfirm,
+      toast,
+      modal,
+      dismissModal,
+    }),
+    [
+      alert,
+      dismissAlert,
+      confirm,
+      destructiveConfirm,
+      dismissConfirm,
+      toast,
+      modal,
+      dismissModal,
+    ]
+  );
 
   return (
-    <OverlayContext.Provider value={{ showAlert, showConfirm, showModal, showToast, hideOverlay }}>
-      <View style={{ flex: 1 }}>
-        {children}
-        
-        <AlertConfirm 
-          visible={isDialogVisible}
-          type={config.type as any}
-          title={config.title}
-          message={config.message}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-          confirmLabel={config.confirmLabel}
-          cancelLabel={config.cancelLabel}
-        />
+    <OverlayContext.Provider value={value}>
+      {children}
 
-        {config.content && (
-          <Animated.View 
-            pointerEvents={isModalVisible ? 'auto' : 'none'}
+      {isBackdropVisible && (
+        <View style={StyleSheet.absoluteFill}>
+          <Pressable
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: "rgba(0,0,0,0.4)" },
+            ]}
+            onPress={handleBackdropPress}
+          />
+          <View
+            pointerEvents="box-none"
             style={{
-              ...StyleSheet.absoluteFillObject,
-              opacity: fadeAnim,
-              zIndex: 9999,
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 20,
             }}
           >
-            <CustomModal 
-              content={config.content}
-              onDismiss={hideOverlay}
-            />
-          </Animated.View>
-        )}
+            {alertVisible && (
+              <AlertUI state={alertState} onDismiss={dismissAlert} />
+            )}
+            {confirmVisible && (
+              <ConfirmUI
+                state={confirmState}
+                onOk={onConfirmOk}
+                onCancel={onConfirmCancel}
+              />
+            )}
+            {modalVisible && (
+              <ModalUI state={modalState} onDismiss={dismissModal} />
+            )}
+          </View>
+        </View>
+      )}
 
-        <Toast 
-          visible={toast !== null}
-          message={toast?.message || ""}
-          type={toast?.type || "info"}
-          duration={toast?.duration}
-          onDismiss={() => setToast(null)}
-        />
-      </View>
+      <ToastUI
+        visible={toastVisible}
+        state={toastState}
+      />
     </OverlayContext.Provider>
   );
-};
+}
 
-export const useOverlay = () => {
-  const context = useContext(OverlayContext);
-  if (context === undefined) {
-    throw new Error("useOverlay must be used within an OverlayProvider");
+export function useOverlay(): OverlayContextValue {
+  const ctx = useContext(OverlayContext);
+  if (!ctx) {
+    throw new Error("useOverlay must be used within OverlayProvider");
   }
-  return context;
-};
+  return ctx;
+}

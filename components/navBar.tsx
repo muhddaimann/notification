@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, TouchableOpacity, Animated } from "react-native";
+import { TouchableOpacity, Animated } from "react-native";
 import { Surface, Text, IconButton, useTheme } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -18,7 +18,7 @@ export default function NavBar({
   const { design } = useDesignSystem();
   const { isNavBarVisible } = useScroll();
   const { showLoader, hideLoader } = useLoader();
-  const { showConfirm, showToast } = useOverlay();
+  const { confirm, toast } = useOverlay();
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -40,27 +40,28 @@ export default function NavBar({
 
   const currentRouteName = state.routes[state.index].name;
 
-  const handleActionButton = () => {
+  const handleActionButton = async () => {
     if (currentRouteName === "a") {
       showLoader();
       setTimeout(() => {
         hideLoader();
-        showToast("Successfully added!", "success");
+        toast({ message: "Successfully added!", variant: "success" });
         console.log("Plus pressed");
       }, 1500);
     } else {
-      showConfirm(
-        "Sign Out",
-        "Are you sure you want to sign out?",
-        () => {
-          showLoader();
-          setTimeout(() => {
-            hideLoader();
-            showToast("Signed out successfully");
-            console.log("Sign out confirmed");
-          }, 1500);
-        }
-      );
+      const ok = await confirm({
+        title: "Sign Out",
+        message: "Are you sure you want to sign out?",
+      });
+
+      if (ok) {
+        showLoader();
+        setTimeout(() => {
+          hideLoader();
+          toast("Signed out successfully");
+          console.log("Sign out confirmed");
+        }, 1500);
+      }
     }
   };
 

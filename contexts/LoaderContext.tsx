@@ -1,10 +1,18 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import { View, StyleSheet, Modal } from "react-native";
-import { ActivityIndicator, useTheme } from "react-native-paper";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
+import { View, StyleSheet, Animated } from "react-native";
+import { ActivityIndicator, useTheme, Text } from "react-native-paper";
 
 type LoaderContextType = {
   isLoading: boolean;
-  showLoader: () => void;
+  loadingText?: string;
+  showLoader: (text?: string) => void;
   hideLoader: () => void;
 };
 
@@ -13,27 +21,73 @@ const LoaderContext = createContext<LoaderContextType | undefined>(undefined);
 export const LoaderProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loaderState, setLoaderState] = useState<{
+    isVisible: boolean;
+    text?: string;
+  }>({
+    isVisible: false,
+  });
   const theme = useTheme();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const showLoader = useCallback(() => setIsLoading(true), []);
-  const hideLoader = useCallback(() => setIsLoading(false), []);
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: loaderState.isVisible ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [loaderState.isVisible]);
+
+  const showLoader = useCallback((text?: string) => {
+    setLoaderState({ isVisible: true, text });
+  }, []);
+
+  const hideLoader = useCallback(() => {
+    setLoaderState((prev) => ({ ...prev, isVisible: false }));
+  }, []);
 
   return (
-    <LoaderContext.Provider value={{ isLoading, showLoader, hideLoader }}>
-      {children}
-      <Modal
-        transparent={true}
-        animationType="fade"
-        visible={isLoading}
-        onRequestClose={hideLoader}
-      >
-        <View style={[styles.container, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
-          <View style={[styles.loaderBox, { backgroundColor: theme.colors.surface }]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        </View>
-      </Modal>
+    <LoaderContext.Provider
+      value={{
+        isLoading: loaderState.isVisible,
+        loadingText: loaderState.text,
+        showLoader,
+        hideLoader,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        {children}
+
+        <Animated.View
+          pointerEvents={loaderState.isVisible ? "auto" : "none"}
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              backgroundColor: theme.colors.primary + "CC",
+              justifyContent: "center",
+              alignItems: "center",
+              opacity: fadeAnim,
+              zIndex: 20000,
+            },
+          ]}
+        >
+          <ActivityIndicator size={48} color={theme.colors.onPrimary} />
+          {loaderState.text && (
+            <Text
+              style={{
+                color: theme.colors.onPrimary,
+                marginTop: 16,
+                fontFamily: "ComicNeue_700Bold",
+                fontSize: 18,
+                textAlign: "center",
+                paddingHorizontal: 32,
+              }}
+            >
+              {loaderState.text}
+            </Text>
+          )}
+        </Animated.View>
+      </View>
     </LoaderContext.Provider>
   );
 };
@@ -45,20 +99,3 @@ export const useLoader = () => {
   }
   return context;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loaderBox: {
-    padding: 24,
-    borderRadius: 16,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-});

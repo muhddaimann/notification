@@ -1,162 +1,191 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Animated, BackHandler } from 'react-native';
-import { Surface, Button, Paragraph, Text, useTheme } from 'react-native-paper';
+import React from "react";
+import { View, Pressable, StyleSheet } from "react-native";
+import { Button, Text, Surface } from "react-native-paper";
+import { AlertOptions, ConfirmOptions } from "../../contexts/OverlayContext";
+import { useDesignSystem } from "../../contexts/DesignSystemContext";
 
-type AlertConfirmProps = {
-  visible: boolean;
-  type: 'alert' | 'confirm' | 'none';
-  title?: string;
-  message?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  confirmLabel?: string;
-  cancelLabel?: string;
-};
+interface AlertUIProps {
+  state: AlertOptions | null;
+  onDismiss: () => void;
+}
 
-export default function AlertConfirm({
-  visible,
-  type,
-  title,
-  message,
-  onConfirm,
-  onCancel,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-}: AlertConfirmProps) {
-  const theme = useTheme();
-  const [shouldRender, setShouldRender] = useState(visible);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+export const AlertUI: React.FC<AlertUIProps> = ({ state, onDismiss }) => {
+  const { theme, design } = useDesignSystem();
 
-  useEffect(() => {
-    if (visible) {
-      setShouldRender(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-        onCancel();
-        return true;
-      });
-      return () => backHandler.remove();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.95,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setShouldRender(false));
-    }
-  }, [visible]);
-
-  if (!shouldRender) return null;
+  if (!state) return null;
 
   return (
-    <View 
+    <View
       style={{
         ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: design.spacing.lg,
+        zIndex: 9999,
       }}
-      pointerEvents={visible ? 'auto' : 'none'}
     >
-      <TouchableWithoutFeedback onPress={onCancel}>
-        <Animated.View 
-          style={{
-            ...StyleSheet.absoluteFillObject,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            opacity: fadeAnim 
-          }} 
-        />
-      </TouchableWithoutFeedback>
-      
-      <Animated.View 
-        style={{ 
-          width: '100%',
-          alignItems: 'center',
-          padding: 24,
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }]
+      <Pressable
+        onPress={onDismiss}
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: "rgba(0,0,0,0.5)",
+        }}
+      />
+
+      <Surface
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          backgroundColor: theme.colors.surface,
+          borderRadius: design.radii.xl,
+          paddingHorizontal: design.spacing.xl,
+          paddingVertical: design.spacing.xl,
         }}
       >
-        <Surface 
-          elevation={4} 
-          style={{ 
-            padding: 24,
-            width: '100%',
-            maxWidth: 400,
-            backgroundColor: theme.colors.surface, 
-            borderRadius: 28 
+        {state.title && (
+          <Text
+            variant="titleLarge"
+            style={{
+              marginBottom: design.spacing.sm,
+              color: theme.colors.onSurface,
+              fontWeight: "700",
+            }}
+          >
+            {state.title}
+          </Text>
+        )}
+
+        <Text
+          variant="bodyMedium"
+          style={{
+            color: theme.colors.onSurfaceVariant,
+            marginBottom: design.spacing.xl,
+            lineHeight: 22,
           }}
         >
-          {title && (
-            <Text 
-              style={{ 
-                fontFamily: 'ComicNeue_700Bold',
-                fontSize: 24,
-                marginBottom: 12,
-                color: theme.colors.onSurface 
-              }}
-            >
-              {title}
-            </Text>
-          )}
-          
-          <View style={{ marginBottom: 24 }}>
-            {message && (
-              <Paragraph 
-                style={{ 
-                  fontFamily: 'ComicNeue_400Regular',
-                  fontSize: 16,
-                  lineHeight: 22,
-                  color: theme.colors.onSurfaceVariant 
-                }}
-              >
-                {message}
-              </Paragraph>
-            )}
-          </View>
+          {state.message}
+        </Text>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-            {type === 'confirm' && (
-              <Button 
-                onPress={onCancel} 
-                mode="text" 
-                textColor={theme.colors.error}
-                labelStyle={{ fontFamily: 'ComicNeue_700Bold' }}
-              >
-                {cancelLabel}
-              </Button>
-            )}
-            <Button 
-              onPress={onConfirm} 
-              mode="contained"
-              labelStyle={{ fontFamily: 'ComicNeue_700Bold' }}
-              style={{ borderRadius: 14 }}
-            >
-              {type === 'confirm' ? confirmLabel : 'OK'}
-            </Button>
-          </View>
-        </Surface>
-      </Animated.View>
+        <View
+          style={{
+            alignItems: "flex-end",
+          }}
+        >
+          <Button
+            mode="contained"
+            onPress={onDismiss}
+            buttonColor={theme.colors.primary}
+            textColor={theme.colors.onPrimary}
+            contentStyle={{ paddingVertical: 6 }}
+          >
+            OK
+          </Button>
+        </View>
+      </Surface>
     </View>
   );
+};
+
+interface ConfirmUIProps {
+  state: ConfirmOptions | null;
+  onOk: () => void;
+  onCancel: () => void;
 }
+
+export const ConfirmUI: React.FC<ConfirmUIProps> = ({
+  state,
+  onOk,
+  onCancel,
+}) => {
+  const { theme, design } = useDesignSystem();
+  const isDestructive = state?.variant === "error";
+
+  if (!state) return null;
+
+  return (
+    <View
+      style={{
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: design.spacing.lg,
+        zIndex: 9999,
+      }}
+    >
+      <Pressable
+        onPress={onCancel}
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: "rgba(0,0,0,0.5)",
+        }}
+      />
+
+      <Surface
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          backgroundColor: theme.colors.surface,
+          borderRadius: design.radii.xl,
+          paddingHorizontal: design.spacing.xl,
+          paddingVertical: design.spacing.xl,
+        }}
+      >
+        {state.title && (
+          <Text
+            variant="titleLarge"
+            style={{
+              marginBottom: design.spacing.sm,
+              color: theme.colors.onSurface,
+              fontWeight: "700",
+            }}
+          >
+            {state.title}
+          </Text>
+        )}
+
+        <Text
+          variant="bodyMedium"
+          style={{
+            color: theme.colors.onSurfaceVariant,
+            marginBottom: design.spacing.xl,
+            lineHeight: 22,
+          }}
+        >
+          {state.message}
+        </Text>
+
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: design.spacing.sm,
+          }}
+        >
+          <Button
+            mode="text"
+            onPress={onCancel}
+            textColor={theme.colors.onSurface}
+            contentStyle={{ paddingVertical: 6 }}
+          >
+            {state.cancelText || "Cancel"}
+          </Button>
+
+          <Button
+            mode="contained"
+            onPress={onOk}
+            buttonColor={
+              isDestructive ? theme.colors.error : theme.colors.primary
+            }
+            textColor={
+              isDestructive ? theme.colors.onError : theme.colors.onPrimary
+            }
+            contentStyle={{ paddingVertical: 6 }}
+          >
+            {state.okText || "OK"}
+          </Button>
+        </View>
+      </Surface>
+    </View>
+  );
+};

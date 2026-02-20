@@ -54,21 +54,28 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <DesignSystemProvider>
-        {/* PaperProvider MUST wrap everything that uses Paper components, including Contexts that render Paper Portal elements */}
         <PaperContextWrapper />
       </DesignSystemProvider>
     </SafeAreaProvider>
   );
 }
 
-// Separate component to access the theme from DesignSystemProvider
+import { AlertUI, ConfirmUI } from "../components/overlay/AlertConfirm";
+import { ToastUI } from "../components/overlay/Toast";
+import { ModalUI } from "../components/overlay/CustomModal";
+
 function PaperContextWrapper() {
   const { theme } = useDesignSystem();
   
   return (
     <PaperProvider theme={theme}>
       <LoaderProvider>
-        <OverlayProvider>
+        <OverlayProvider
+          AlertUI={AlertUI}
+          ConfirmUI={ConfirmUI}
+          ToastUI={ToastUI}
+          ModalUI={ModalUI}
+        >
           <RootLayoutNav />
         </OverlayProvider>
       </LoaderProvider>

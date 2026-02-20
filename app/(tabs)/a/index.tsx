@@ -23,11 +23,14 @@ import { useScroll } from "../../../contexts/ScrollContext";
 import ScrollTop from "../../../components/scrollTop";
 import { useRouter } from "expo-router";
 
+import { useOverlay } from "../../../contexts/OverlayContext";
+
 export default function Home() {
   const theme = useTheme();
   const router = useRouter();
   const { design, isDarkMode, toggleTheme } = useDesignSystem();
   const { handleScroll, registerScrollRef } = useScroll();
+  const { alert, confirm, destructiveConfirm, toast, modal } = useOverlay();
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -92,6 +95,92 @@ export default function Home() {
           >
             Go to Home Main
           </Button>
+        </View>
+
+        <Divider />
+
+        <View style={{ gap: 10, padding: design.spacing.md }}>
+          <Text
+            variant="titleLarge"
+            style={{ fontWeight: "bold", marginBottom: design.spacing.sm }}
+          >
+            Overlay Module
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: design.spacing.sm,
+            }}
+          >
+            <Button
+              mode="contained"
+              onPress={() =>
+                alert({
+                  title: "Alert",
+                  message: "This is a simple alert message.",
+                })
+              }
+            >
+              Alert
+            </Button>
+            <Button
+              mode="contained"
+              onPress={async () => {
+                const ok = await confirm({
+                  title: "Confirm",
+                  message: "Are you sure you want to proceed?",
+                });
+                toast(ok ? "Confirmed!" : "Cancelled");
+              }}
+            >
+              Confirm
+            </Button>
+            <Button
+              mode="contained"
+              buttonColor={theme.colors.error}
+              textColor={theme.colors.onError}
+              onPress={async () => {
+                const ok = await destructiveConfirm({
+                  title: "Delete Item",
+                  message: "This action cannot be undone.",
+                });
+                if (ok) toast({ message: "Item deleted", variant: "error" });
+              }}
+            >
+              Destructive
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() => toast({ message: "Success!", variant: "success" })}
+            >
+              Toast Success
+            </Button>
+            <Button
+              mode="contained"
+              onPress={() =>
+                modal({
+                  content: (
+                    <View style={{ alignItems: "center", gap: 10 }}>
+                      <Avatar.Icon size={64} icon="information" />
+                      <Text variant="titleMedium">Custom Modal Content</Text>
+                      <Text variant="bodySmall" style={{ textAlign: "center" }}>
+                        You can put any React components inside the modal.
+                      </Text>
+                      <Button
+                        mode="outlined"
+                        onPress={() => toast("Modal Button Clicked")}
+                      >
+                        Action inside Modal
+                      </Button>
+                    </View>
+                  ),
+                })
+              }
+            >
+              Custom Modal
+            </Button>
+          </View>
         </View>
 
         <Divider />
