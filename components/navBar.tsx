@@ -7,18 +7,21 @@ import { useDesignSystem } from "../contexts/DesignSystemContext";
 import { useScroll } from "../contexts/ScrollContext";
 import { useLoader } from "../contexts/LoaderContext";
 import { useOverlay } from "../contexts/OverlayContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function NavBar({
   state,
-  descriptors,
   navigation,
 }: BottomTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { design } = useDesignSystem();
+  const router = useRouter();
   const { isNavBarVisible } = useScroll();
   const { showLoader, hideLoader } = useLoader();
   const { confirm, toast } = useOverlay();
+  const { signOut } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -52,15 +55,18 @@ export default function NavBar({
       const ok = await confirm({
         title: "Sign Out",
         message: "Are you sure you want to sign out?",
+        okText: "Sign Out",
+        variant: "error",
       });
 
       if (ok) {
-        showLoader();
-        setTimeout(() => {
+        showLoader("Signing out...");
+        setTimeout(async () => {
+          await signOut();
           hideLoader();
+          router.replace("/goodbye");
           toast("Signed out successfully");
-          console.log("Sign out confirmed");
-        }, 1500);
+        }, 1200);
       }
     }
   };

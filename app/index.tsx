@@ -1,104 +1,185 @@
-import React, { useEffect, useRef } from "react";
-import { View, Animated, Easing, Dimensions } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  Easing,
+} from "react-native";
+import { Text, TextInput, Button, ActivityIndicator } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Text, useTheme } from "react-native-paper";
+import { useAuth } from "../contexts/AuthContext";
 import { useDesignSystem } from "../contexts/DesignSystemContext";
+import { useOverlay } from "../contexts/OverlayContext";
+import { useLoader } from "../contexts/LoaderContext";
 
-export default function Index() {
-  const theme = useTheme();
+export default function LoginScreen() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const { signIn, user, isLoading } = useAuth();
+  const { theme, design } = useDesignSystem();
+  const { toast } = useOverlay();
+  const { showLoader, hideLoader } = useLoader();
   const router = useRouter();
-  const { design } = useDesignSystem();
-  const screenWidth = Dimensions.get("window").width;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateAnim = useRef(new Animated.Value(40)).current;
+  const splashFade = useRef(new Animated.Value(1)).current;
+  const contentFade = useRef(new Animated.Value(0)).current;
+  const contentTranslate = useRef(new Animated.Value(40)).current;
+  const [isSplashDone, setIsSplashDone] = useState(false);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateAnim, {
-        toValue: 0,
-        duration: 500,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    if (!isLoading) {
+      if (user) {
+        router.replace("/welcome");
+      } else {
+        Animated.parallel([
+          Animated.timing(splashFade, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(contentFade, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(contentTranslate, {
+            toValue: 0,
+            duration: 800,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          setIsSplashDone(true);
+        });
+      }
+    }
+  }, [isLoading, user]);
 
-    const timeout = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(translateAnim, {
-          toValue: -screenWidth * 0.3,
-          duration: 300,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        router.replace("/a");
-      });
-    }, 2000);
+  const handleLogin = async () => {
+    if (!username || !password) {
+      toast({ message: "Username and Password required", variant: "error" });
+      return;
+    }
 
-    return () => clearTimeout(timeout);
-  }, [router, screenWidth]);
+    showLoader("Authenticating...");
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background,
-        paddingHorizontal: design.spacing.xl,
-        paddingTop: design.spacing["3xl"] * 4,
-      }}
-    >
-      <Animated.View
+    setTimeout(async () => {
+      const success = await signIn(username, password);
+      hideLoader();
+
+      if (success) {
+        toast({ message: "Successfully logged in", variant: "success" });
+        router.replace("/welcome");
+      } else {
+        toast({
+          message: "Invalid credentials. Try password '123'",
+          variant: "error",
+        });
+      }
+    }, 1200);
+  };
+
+  if (isLoading && !isSplashDone) {
+    return (
+      <View
         style={{
-          opacity: fadeAnim,
-          transform: [{ translateX: translateAnim }],
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.colors.background,
         }}
       >
-        <View
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={{ marginTop: 20, opacity: 0.6 }}>
+          Initializing HRMS...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: theme.colors.background }}
+    >
+      {!isSplashDone && (
+        <Animated.View
           style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: "center",
             alignItems: "center",
-            gap: design.spacing.sm,
+            backgroundColor: theme.colors.background,
+            opacity: splashFade,
+            zIndex: 10,
           }}
         >
-          <Text variant="headlineLarge" style={{ fontWeight: "600" }}>
+          <Text variant="headlineLarge" style={{ fontWeight: "700" }}>
             Faith HRMS
           </Text>
+        </Animated.View>
+      )}
 
+      <Animated.View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          padding: design.spacing.xl,
+          opacity: contentFade,
+          transform: [{ translateY: contentTranslate }],
+        }}
+      >
+        <View style={{ marginBottom: 40 }}>
           <Text
-            variant="bodyMedium"
-            style={{
-              opacity: 0.6,
-              textAlign: "center",
-              lineHeight: 20,
-            }}
+            variant="displaySmall"
+            style={{ fontWeight: "800", marginBottom: 4 }}
           >
-            Preparing your workspace and syncing staff data...
+            Welcome Back
+          </Text>
+          <Text variant="bodyLarge" style={{ opacity: 0.6 }}>
+            Login to access your workspace
           </Text>
         </View>
 
-        <View
-          style={{
-            marginTop: design.spacing["2xl"],
-            alignItems: "center",
-          }}
-        >
-          <ActivityIndicator
-            animating
-            size="large"
-            color={theme.colors.primary}
+        <View style={{ width: "100%", gap: design.spacing.md }}>
+          <TextInput
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            mode="outlined"
+            autoCapitalize="none"
+            left={<TextInput.Icon icon="account" />}
           />
+
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            mode="outlined"
+            autoCapitalize="none"
+            left={<TextInput.Icon icon="lock" />}
+            onSubmitEditing={handleLogin}
+          />
+
+          <Button
+            mode="contained"
+            onPress={handleLogin}
+            style={{
+              marginTop: design.spacing.sm,
+              borderRadius: design.radii.lg,
+            }}
+            contentStyle={{ height: 50 }}
+            labelStyle={{ fontSize: 16, fontWeight: "700" }}
+          >
+            SIGN IN
+          </Button>
         </View>
       </Animated.View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
 import { Surface } from "react-native-paper";
 import { ModalOptions } from "../../contexts/OverlayContext";
 import { useDesignSystem } from "../../contexts/DesignSystemContext";
@@ -18,25 +18,17 @@ export const ModalUI: React.FC<ModalUIProps> = ({ state, onDismiss }) => {
     <Pressable style={{ width: "100%" }}>
       <Surface
         elevation={5}
-        style={[
-          styles.container,
-          { 
-            backgroundColor: theme.colors.surface,
-            padding: design.spacing.xl,
-            borderRadius: design.radii.lg,
-          },
-        ]}
+        style={{ 
+          backgroundColor: theme.colors.elevatedSurface || theme.colors.surface,
+          padding: design.spacing.xl,
+          borderRadius: design.radii.lg,
+          minWidth: 280,
+          maxWidth: 560,
+          alignSelf: "center",
+        }}
       >
         <View style={{ width: "100%" }}>{state.content}</View>
       </Surface>
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    minWidth: 280,
-    maxWidth: 560,
-    alignSelf: "center",
-  },
-});

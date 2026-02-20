@@ -19,6 +19,9 @@ import { useEffect } from "react";
 
 SplashScreen.preventAutoHideAsync();
 
+import { TokenProvider } from "../contexts/TokenContext";
+import { AuthProvider } from "../contexts/AuthContext";
+
 function RootLayoutNav() {
   const { theme, isDarkMode } = useDesignSystem();
 
@@ -53,9 +56,13 @@ export default function Layout() {
 
   return (
     <SafeAreaProvider>
-      <DesignSystemProvider>
-        <PaperContextWrapper />
-      </DesignSystemProvider>
+      <TokenProvider>
+        <AuthProvider>
+          <DesignSystemProvider>
+            <PaperContextWrapper />
+          </DesignSystemProvider>
+        </AuthProvider>
+      </TokenProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable } from "react-native";
 import { Button, Text, Surface } from "react-native-paper";
 import { AlertOptions, ConfirmOptions } from "../../contexts/OverlayContext";
 import { useDesignSystem } from "../../contexts/DesignSystemContext";
@@ -15,74 +15,31 @@ export const AlertUI: React.FC<AlertUIProps> = ({ state, onDismiss }) => {
   if (!state) return null;
 
   return (
-    <View
-      style={{
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: design.spacing.lg,
-        zIndex: 9999,
-      }}
-    >
-      <Pressable
-        onPress={onDismiss}
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: "rgba(0,0,0,0.5)",
-        }}
-      />
-
+    <Pressable style={{ width: "100%" }}>
       <Surface
-        style={{
-          width: "100%",
-          maxWidth: 520,
+        elevation={5}
+        style={{ 
           backgroundColor: theme.colors.surface,
-          borderRadius: design.radii.xl,
-          paddingHorizontal: design.spacing.xl,
-          paddingVertical: design.spacing.xl,
+          padding: design.spacing.xl,
+          borderRadius: design.radii.lg,
+          minWidth: 280,
+          maxWidth: 560,
+          alignSelf: "center",
         }}
       >
         {state.title && (
-          <Text
-            variant="titleLarge"
-            style={{
-              marginBottom: design.spacing.sm,
-              color: theme.colors.onSurface,
-              fontWeight: "700",
-            }}
-          >
+          <Text variant="titleLarge" style={{ fontWeight: "600", marginBottom: design.spacing.md }}>
             {state.title}
           </Text>
         )}
-
-        <Text
-          variant="bodyMedium"
-          style={{
-            color: theme.colors.onSurfaceVariant,
-            marginBottom: design.spacing.xl,
-            lineHeight: 22,
-          }}
-        >
-          {state.message}
-        </Text>
-
-        <View
-          style={{
-            alignItems: "flex-end",
-          }}
-        >
-          <Button
-            mode="contained"
-            onPress={onDismiss}
-            buttonColor={theme.colors.primary}
-            textColor={theme.colors.onPrimary}
-            contentStyle={{ paddingVertical: 6 }}
-          >
-            OK
-          </Button>
+        <View style={{ marginBottom: design.spacing.xl }}>
+          <Text variant="bodyMedium">{state.message}</Text>
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: design.spacing.sm }}>
+          <Button onPress={onDismiss}>OK</Button>
         </View>
       </Surface>
-    </View>
+    </Pressable>
   );
 };
 
@@ -103,89 +60,40 @@ export const ConfirmUI: React.FC<ConfirmUIProps> = ({
   if (!state) return null;
 
   return (
-    <View
-      style={{
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: design.spacing.lg,
-        zIndex: 9999,
-      }}
-    >
-      <Pressable
-        onPress={onCancel}
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: "rgba(0,0,0,0.5)",
-        }}
-      />
-
+    <Pressable style={{ width: "100%" }}>
       <Surface
-        style={{
-          width: "100%",
-          maxWidth: 520,
+        elevation={5}
+        style={{ 
           backgroundColor: theme.colors.surface,
-          borderRadius: design.radii.xl,
-          paddingHorizontal: design.spacing.xl,
-          paddingVertical: design.spacing.xl,
+          padding: design.spacing.xl,
+          borderRadius: design.radii.lg,
+          minWidth: 280,
+          maxWidth: 560,
+          alignSelf: "center",
         }}
       >
         {state.title && (
-          <Text
-            variant="titleLarge"
-            style={{
-              marginBottom: design.spacing.sm,
-              color: theme.colors.onSurface,
-              fontWeight: "700",
-            }}
-          >
+          <Text variant="titleLarge" style={{ fontWeight: "600", marginBottom: design.spacing.md }}>
             {state.title}
           </Text>
         )}
-
-        <Text
-          variant="bodyMedium"
-          style={{
-            color: theme.colors.onSurfaceVariant,
-            marginBottom: design.spacing.xl,
-            lineHeight: 22,
-          }}
-        >
-          {state.message}
-        </Text>
-
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            gap: design.spacing.sm,
-          }}
-        >
-          <Button
-            mode="text"
-            onPress={onCancel}
-            textColor={theme.colors.onSurface}
-            contentStyle={{ paddingVertical: 6 }}
-          >
+        <View style={{ marginBottom: design.spacing.xl }}>
+          <Text variant="bodyMedium">{state.message}</Text>
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: design.spacing.sm }}>
+          <Button onPress={onCancel} textColor={theme.colors.onSurface}>
             {state.cancelText || "Cancel"}
           </Button>
-
           <Button
-            mode="contained"
             onPress={onOk}
-            buttonColor={
-              isDestructive ? theme.colors.error : theme.colors.primary
-            }
-            textColor={
-              isDestructive ? theme.colors.onError : theme.colors.onPrimary
-            }
-            contentStyle={{ paddingVertical: 6 }}
+            mode="contained"
+            buttonColor={isDestructive ? theme.colors.error : theme.colors.primary}
+            textColor={isDestructive ? theme.colors.onError : theme.colors.onPrimary}
           >
             {state.okText || "OK"}
           </Button>
         </View>
       </Surface>
-    </View>
+    </Pressable>
   );
 };

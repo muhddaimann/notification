@@ -6,7 +6,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { View, Pressable } from "react-native";
+import { ToastUI } from "../components/overlay/Toast";
 
 export type Variant = "neutral" | "info" | "success" | "warning" | "error";
 
@@ -57,7 +58,7 @@ export function OverlayProvider({
   children,
   AlertUI,
   ConfirmUI,
-  ToastUI,
+  ToastUI: _ToastUI,
   ModalUI,
 }: {
   children: React.ReactNode;
@@ -157,7 +158,6 @@ export function OverlayProvider({
   const toast = useCallback((opts: ToastOptions | string) => {
     const next = typeof opts === "string" ? { message: opts } : opts;
     
-    // Clear existing timer if any
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
@@ -171,7 +171,6 @@ export function OverlayProvider({
     });
     setToastVisible(true);
 
-    // Auto dismiss
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
       toastTimerRef.current = null;
@@ -232,12 +231,23 @@ export function OverlayProvider({
       {children}
 
       {isBackdropVisible && (
-        <View style={StyleSheet.absoluteFill}>
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999
+        }}>
           <Pressable
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: "rgba(0,0,0,0.4)" },
-            ]}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.4)"
+            }}
             onPress={handleBackdropPress}
           />
           <View
