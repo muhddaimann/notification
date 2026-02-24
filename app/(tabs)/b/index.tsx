@@ -12,15 +12,26 @@ import { useDesignSystem } from "../../../contexts/DesignSystemContext";
 import { useScroll } from "../../../contexts/ScrollContext";
 import ScrollTop from "../../../components/scrollTop";
 
+import { useAuth } from "../../../contexts/AuthContext";
+import { useNotifications } from "../../../contexts/NotificationContext";
+
 export default function SettingsScreen() {
   const theme = useTheme();
   const { design, isDarkMode, toggleTheme } = useDesignSystem();
   const { handleScroll, registerScrollRef } = useScroll();
+  const { user } = useAuth();
+  const { expoPushToken, register } = useNotifications();
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     registerScrollRef("b", scrollRef.current);
   }, [registerScrollRef]);
+
+  const handlePushToggle = async () => {
+    if (!expoPushToken) {
+      await register();
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -48,12 +59,12 @@ export default function SettingsScreen() {
           <Avatar.Icon size={80} icon="account" />
           <Text
             variant="headlineSmall"
-            style={{ marginTop: design.spacing.sm }}
+            style={{ marginTop: design.spacing.sm, fontWeight: '700' }}
           >
-            Guest User
+            {user?.name || "Guest User"}
           </Text>
           <Text variant="bodyMedium" style={{ opacity: 0.7 }}>
-            guest@example.com
+            @{user?.username || "guest"}
           </Text>
         </View>
 
@@ -72,6 +83,31 @@ export default function SettingsScreen() {
 
         <Divider />
 
+        <List.Section title="System">
+          <List.Item
+            title="Push Notifications"
+            description={expoPushToken ? "Notifications enabled" : "Enable push notifications"}
+            left={(props) => <List.Icon {...props} icon="bell-outline" />}
+            right={() => (
+              <Switch 
+                value={!!expoPushToken} 
+                onValueChange={handlePushToggle}
+                disabled={!!expoPushToken}
+              />
+            )}
+          />
+          {expoPushToken && (
+             <List.Item
+             title="Token"
+             description={expoPushToken}
+             descriptionNumberOfLines={1}
+             left={(props) => <List.Icon {...props} icon="key-outline" />}
+           />
+          )}
+        </List.Section>
+
+        <Divider />
+
         <List.Section title="About">
           <List.Item
             title="App Version"
@@ -80,16 +116,7 @@ export default function SettingsScreen() {
               <List.Icon {...props} icon="information-outline" />
             )}
           />
-          <List.Item
-            title="Design Token: Spacing"
-            description={`MD: ${design.spacing.md}, LG: ${design.spacing.lg}`}
-            left={(props) => <List.Icon {...props} icon="format-size" />}
-          />
-          <List.Item
-            title="Design Token: Radii"
-            description={`LG: ${design.radii.lg}, XL: ${design.radii.xl}`}
-            left={(props) => <List.Icon {...props} icon="rounded-corner" />}
-          />
+
         </List.Section>
 
         <View

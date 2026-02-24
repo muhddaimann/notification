@@ -71,6 +71,8 @@ import { AlertUI, ConfirmUI } from "../components/overlay/AlertConfirm";
 import { ToastUI } from "../components/overlay/Toast";
 import { ModalUI } from "../components/overlay/CustomModal";
 
+import { NotificationProvider } from "../contexts/NotificationContext";
+
 function PaperContextWrapper() {
   const { theme } = useDesignSystem();
   
@@ -83,7 +85,9 @@ function PaperContextWrapper() {
           ToastUI={ToastUI}
           ModalUI={ModalUI}
         >
-          <RootLayoutNav />
+          <NotificationProvider>
+            <RootLayoutNav />
+          </NotificationProvider>
         </OverlayProvider>
       </LoaderProvider>
     </PaperProvider>

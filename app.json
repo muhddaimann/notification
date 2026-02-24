@@ -14,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.muhddaimann.notification"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +23,9 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.muhddaimann.notification",
+      "googleServicesFile": ".npm run is/google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +33,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1026ad70-f9bc-46e1-87d2-017350268bfd"
+      }
+    },
+    "owner": "muhddaimann"
   }
 }
