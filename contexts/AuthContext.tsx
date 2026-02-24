@@ -6,17 +6,19 @@ import React, {
   useCallback,
 } from "react";
 import { useToken } from "./TokenContext";
+import { loginApi, AuthResponse } from "./api/auth";
 
 type User = {
   id: string;
   username: string;
   name: string;
+  SiteDepartmentProfileID?: string;
 };
 
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  signIn: (username: string, password: string) => Promise<boolean>;
+  signIn: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -48,15 +50,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signIn = useCallback(
     async (username: string, password: string) => {
-      if (password === "123") {
-        const dummyToken = "auth-token-123-" + Date.now();
-        const userData = { id: "1", username, name: "Daimann" };
-        
-        await saveAuth(dummyToken, userData);
-        setUser(userData);
-        return true;
+      try {
+        const response: AuthResponse = await loginApi({ username, password });
+
+        if (response.status === "success" && response.token) {
+          const userData: User = { 
+            id: String(response.staff_id || ""), 
+            username, 
+            name: response.user_name || username,
+            SiteDepartmentProfileID: response.SiteDepartmentProfileID
+          };
+          
+          await saveAuth(response.token, userData);
+          setUser(userData);
+          return { success: true };
+        } else {
+          return { 
+            success: false, 
+            message: response.message || "Invalid credentials" 
+          };
+        }
+      } catch (error: any) {
+        return { 
+          success: false, 
+          message: error.message || "An error occurred during login" 
+        };
       }
-      return false;
     },
     [saveAuth]
   );

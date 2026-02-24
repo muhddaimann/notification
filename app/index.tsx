@@ -16,11 +16,14 @@ import { useLoader } from "../contexts/LoaderContext";
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [secure, setSecure] = useState(true);
+
   const { signIn, user, isLoading } = useAuth();
   const { theme, design } = useDesignSystem();
   const { toast } = useOverlay();
   const { showLoader, hideLoader } = useLoader();
   const router = useRouter();
+
   const splashFade = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
   const contentTranslate = useRef(new Animated.Value(40)).current;
@@ -65,15 +68,15 @@ export default function LoginScreen() {
     showLoader("Authenticating...");
 
     setTimeout(async () => {
-      const success = await signIn(username, password);
+      const result = await signIn(username, password);
       hideLoader();
 
-      if (success) {
+      if (result.success) {
         toast({ message: "Successfully logged in", variant: "success" });
         router.replace("/welcome");
       } else {
         toast({
-          message: "Invalid credentials. Try password '123'",
+          message: result.message || "Invalid credentials",
           variant: "error",
         });
       }
@@ -159,10 +162,16 @@ export default function LoginScreen() {
             label="Password"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={secure}
             mode="outlined"
             autoCapitalize="none"
             left={<TextInput.Icon icon="lock" />}
+            right={
+              <TextInput.Icon
+                icon={secure ? "eye-off" : "eye"}
+                onPress={() => setSecure(!secure)}
+              />
+            }
             onSubmitEditing={handleLogin}
           />
 
