@@ -7,6 +7,8 @@ import React, {
   useCallback,
 } from "react";
 import * as Notifications from "expo-notifications";
+import * as Linking from "expo-linking";
+import { Platform } from "react-native";
 import { registerForPushNotificationsAsync, sendTokenToBackend } from "./api/push";
 import { useAuth } from "./AuthContext";
 import { useToken } from "./TokenContext";
@@ -24,7 +26,9 @@ Notifications.setNotificationHandler({
 type NotificationContextType = {
   expoPushToken: string | undefined;
   notification: Notifications.Notification | undefined;
+  isPermissionGranted: boolean;
   register: (force?: boolean) => Promise<void>;
+  openSettings: () => void;
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -36,40 +40,59 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
+  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
+  
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const { user } = useAuth();
   const { getAuth, getPushToken, savePushToken } = useToken();
-  const { toast } = useOverlay();
+  const { confirm, toast } = useOverlay();
+
+  const openSettings = useCallback(() => {
+    if (Platform.OS === "ios") {
+      Linking.openURL("app-settings:");
+    } else {
+      Linking.openSettings();
+    }
+  }, []);
 
   const register = useCallback(async (force = false) => {
     try {
-      // 1. Get current token from SecureStore
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      
+      if (existingStatus === "denied" && force) {
+        const ok = await confirm({
+          title: "Permission Required",
+          message: "Notifications are disabled. Please enable them in your device settings to stay updated.",
+          okText: "Open Settings",
+          cancelText: "Later"
+        });
+        if (ok) openSettings();
+        return;
+      }
+
       const savedToken = await getPushToken();
+      const registration = await registerForPushNotificationsAsync();
       
-      // 2. Register with Expo
-      const newToken = await registerForPushNotificationsAsync();
-      
-      if (newToken) {
-        setExpoPushToken(newToken);
+      if (registration) {
+        setIsPermissionGranted(true);
+        setExpoPushToken(registration.token);
         
-        // 3. Only send to backend if it's new, changed, or forced
-        if (force || savedToken !== newToken) {
+        if (force || savedToken !== registration.token) {
           const { token: authToken } = await getAuth();
           if (authToken) {
-            await sendTokenToBackend(newToken, authToken);
-            await savePushToken(newToken);
-            console.log("Push token updated on backend.");
+            await sendTokenToBackend(registration, authToken);
+            await savePushToken(registration.token);
           }
-        } else {
-          console.log("Push token is already up to date.");
         }
+      } else {
+        setIsPermissionGranted(false);
       }
     } catch (error) {
       console.error("Failed to register for push notifications", error);
     }
-  }, [getAuth, getPushToken, savePushToken]);
+  }, [getAuth, getPushToken, savePushToken, confirm, openSettings]);
 
   useEffect(() => {
     notificationListener.current = Notifications.addNotificationReceivedListener(
@@ -90,7 +113,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  // Automate registration when user logs in or app launches with user
   useEffect(() => {
     if (user) {
       register();
@@ -98,7 +120,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [user]);
 
   return (
-    <NotificationContext.Provider value={{ expoPushToken, notification, register }}>
+    <NotificationContext.Provider value={{ expoPushToken, notification, isPermissionGranted, register, openSettings }}>
       {children}
     </NotificationContext.Provider>
   );

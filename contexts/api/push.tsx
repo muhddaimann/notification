@@ -4,12 +4,20 @@ import { Platform } from "react-native";
 import api from "./api";
 
 /**
+ * Result type for push registration
+ */
+export interface PushRegistrationResult {
+  token: string;
+  os: string;
+  deviceName: string | null;
+}
+
+/**
  * This function handles getting the user's permission and retrieving the Expo Push Token.
- * It also configures the notification channel for Android.
- * @returns The Expo Push Token string, or undefined if permission is denied or on a simulator.
+ * Now collects device metadata (OS and Model Name).
  */
 export async function registerForPushNotificationsAsync(): Promise<
-  string | undefined
+  PushRegistrationResult | undefined
 > {
   let token;
 
@@ -32,57 +40,62 @@ export async function registerForPushNotificationsAsync(): Promise<
     }
     if (finalStatus !== "granted") {
       console.log("User denied push notification permissions.");
-      // You might want to show an alert to the user here.
       return;
     }
     token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log("Expo Push Token:", token);
   } else {
-    console.log(
-      "Push Notifications are not available on simulators. Must use a physical device.",
-    );
+    console.log("Push Notifications are not available on simulators.");
+    return;
   }
 
-  return token;
+  return {
+    token: token,
+    os: Platform.OS,
+    deviceName: Device.modelName,
+  };
 }
 
 /**
- * This function sends the retrieved Expo token to your backend server.
- * @param expoPushToken The token received from registerForPushNotificationsAsync.
- * @param authToken The JWT token for authenticating the user.
+ * This function sends the retrieved Expo token and device metadata to your backend server.
  */
 export async function sendTokenToBackend(
-  expoPushToken: string,
+  registration: PushRegistrationResult,
   authToken: string,
 ): Promise<void> {
   try {
     await api.post(
       "/push.php",
-      { expo_token: expoPushToken },
+      {
+        action: "register",
+        expo_token: registration.token,
+        device_os: registration.os,
+        device_name: registration.deviceName,
+      },
       {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
       },
     );
-    console.log("Expo Push Token sent to backend successfully.");
+    console.log("Push registration successful.");
   } catch (error) {
-    console.error("Failed to send Expo Push Token to backend:", error);
-    // Optionally, re-throw the error if the caller needs to handle it.
+    console.error("Failed to send push metadata to backend:", error);
     throw error;
   }
 }
 
 /**
- * This function triggers a push notification to specific staff members.
- * @param targetStaffIds Array of staff IDs to receive the notification.
- * @param title The title of the notification.
- * @param message The body text of the notification.
- * @param authToken The JWT token for authentication.
- * @param extraData Optional object containing additional data for the notification.
+ * This function triggers a push notification with support for advanced targeting.
+ * @param targetType 'all', 'specific_staff', or 'specific_device'
+ * @param targetData Object containing target_staff_ids or target_tokens
+ * @param title Notification title
+ * @param message Notification body
+ * @param authToken JWT token
+ * @param extraData Optional payload
  */
 export async function sendPushNotification(
-  targetStaffIds: number[],
+  targetType: "all" | "specific_staff" | "specific_device",
+  targetData: { target_staff_ids?: number[]; target_tokens?: string[] },
   title: string,
   message: string,
   authToken: string,
@@ -93,7 +106,8 @@ export async function sendPushNotification(
       "/push.php",
       {
         action: "send",
-        target_staff_ids: targetStaffIds,
+        target_type: targetType,
+        ...targetData,
         title: title,
         message: message,
         extra_data: extraData,
@@ -104,7 +118,6 @@ export async function sendPushNotification(
         },
       },
     );
-    console.log("Push notification request sent:", response.data);
     return response.data;
   } catch (error) {
     console.error("Failed to trigger push notification:", error);

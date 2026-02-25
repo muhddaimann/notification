@@ -20,7 +20,7 @@ export default function SettingsScreen() {
   const { design, isDarkMode, toggleTheme } = useDesignSystem();
   const { handleScroll, registerScrollRef } = useScroll();
   const { user } = useAuth();
-  const { expoPushToken, register } = useNotifications();
+  const { expoPushToken, register, isPermissionGranted } = useNotifications();
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -28,8 +28,8 @@ export default function SettingsScreen() {
   }, [registerScrollRef]);
 
   const handlePushToggle = async () => {
-    if (!expoPushToken) {
-      await register();
+    if (!expoPushToken || !isPermissionGranted) {
+      await register(true);
     }
   };
 
@@ -86,13 +86,13 @@ export default function SettingsScreen() {
         <List.Section title="System">
           <List.Item
             title="Push Notifications"
-            description={expoPushToken ? "Notifications enabled" : "Enable push notifications"}
+            description={isPermissionGranted ? "Notifications enabled" : "Enable push notifications"}
             left={(props) => <List.Icon {...props} icon="bell-outline" />}
             right={() => (
               <Switch 
-                value={!!expoPushToken} 
+                value={isPermissionGranted} 
                 onValueChange={handlePushToggle}
-                disabled={!!expoPushToken}
+                disabled={isPermissionGranted}
               />
             )}
           />

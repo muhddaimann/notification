@@ -5,7 +5,7 @@ import { useDesignSystem } from "../../../contexts/DesignSystemContext";
 import { useScroll } from "../../../contexts/ScrollContext";
 import ScrollTop from "../../../components/scrollTop";
 import HomeHeader from "../../../components/a/header";
-import { Button, Card, Text, TextInput } from "react-native-paper";
+import { Button, Card, Text, TextInput, SegmentedButtons } from "react-native-paper";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToken } from "../../../contexts/TokenContext";
 import { useNotifications } from "../../../contexts/NotificationContext";
@@ -25,12 +25,13 @@ export default function Home() {
 
   const [pushTitle, setPushTitle] = useState("Push Test");
   const [pushBody, setPushBody] = useState("Your push notification system is working!");
+  const [targetType, setTargetType] = useState<"self" | "all">("self");
 
   useEffect(() => {
     registerScrollRef("a", scrollRef.current);
   }, [registerScrollRef]);
 
-  const handleSelfPush = async () => {
+  const handleSendPush = async () => {
     if (!user) return;
     if (!expoPushToken) {
       toast({ message: "Register for push first in Settings", variant: "warning" });
@@ -47,8 +48,15 @@ export default function Home() {
       if (!token) return;
 
       toast("Sending notification...");
+      
+      const apiTargetType = targetType === "self" ? "specific_staff" : "all";
+      const targetData = targetType === "self" 
+        ? { target_staff_ids: [Number(user.id)] } 
+        : {};
+
       await sendPushNotification(
-        [Number(user.id)],
+        apiTargetType,
+        targetData,
         pushTitle,
         pushBody,
         token,
@@ -83,11 +91,21 @@ export default function Home() {
 
         <View style={{ padding: design.spacing.lg, gap: design.spacing.md }}>
           <Card style={{ borderRadius: design.radii.lg, padding: design.spacing.md }}>
-            <Card.Title title="Notification Test" subtitle="Push to Self Feature" />
+            <Card.Title title="Notification Test" subtitle="Push Targeting Feature" />
             <Card.Content style={{ marginBottom: design.spacing.md, gap: design.spacing.sm }}>
               <Text variant="bodyMedium" style={{ marginBottom: design.spacing.xs }}>
-                Testing the new backend push feature. This will send a notification to your own device.
+                Select your target and customize the notification payload.
               </Text>
+              
+              <SegmentedButtons
+                value={targetType}
+                onValueChange={setTargetType as any}
+                buttons={[
+                  { value: "self", label: "To Myself", icon: "account" },
+                  { value: "all", label: "To All", icon: "account-group" },
+                ]}
+                style={{ marginBottom: design.spacing.sm }}
+              />
               
               <TextInput
                 label="Title"
@@ -110,10 +128,11 @@ export default function Home() {
             <Card.Actions>
               <Button 
                 mode="contained" 
-                onPress={handleSelfPush}
+                onPress={handleSendPush}
                 icon="bell-ring"
+                buttonColor={targetType === 'all' ? theme.colors.error : theme.colors.primary}
               >
-                Push to Self
+                Send {targetType === 'self' ? 'to Self' : 'to All Devices'}
               </Button>
             </Card.Actions>
           </Card>
