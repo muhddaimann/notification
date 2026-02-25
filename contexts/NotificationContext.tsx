@@ -14,7 +14,6 @@ import { useOverlay } from "./OverlayContext";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
@@ -25,7 +24,7 @@ Notifications.setNotificationHandler({
 type NotificationContextType = {
   expoPushToken: string | undefined;
   notification: Notifications.Notification | undefined;
-  register: () => Promise<void>;
+  register: (force?: boolean) => Promise<void>;
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -41,23 +40,36 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   const { user } = useAuth();
-  const { getAuth } = useToken();
-  const { confirm, toast } = useOverlay();
+  const { getAuth, getPushToken, savePushToken } = useToken();
+  const { toast } = useOverlay();
 
-  const register = useCallback(async () => {
+  const register = useCallback(async (force = false) => {
     try {
-      const token = await registerForPushNotificationsAsync();
-      if (token) {
-        setExpoPushToken(token);
-        const { token: authToken } = await getAuth();
-        if (authToken) {
-          await sendTokenToBackend(token, authToken);
+      // 1. Get current token from SecureStore
+      const savedToken = await getPushToken();
+      
+      // 2. Register with Expo
+      const newToken = await registerForPushNotificationsAsync();
+      
+      if (newToken) {
+        setExpoPushToken(newToken);
+        
+        // 3. Only send to backend if it's new, changed, or forced
+        if (force || savedToken !== newToken) {
+          const { token: authToken } = await getAuth();
+          if (authToken) {
+            await sendTokenToBackend(newToken, authToken);
+            await savePushToken(newToken);
+            console.log("Push token updated on backend.");
+          }
+        } else {
+          console.log("Push token is already up to date.");
         }
       }
     } catch (error) {
       console.error("Failed to register for push notifications", error);
     }
-  }, [getAuth]);
+  }, [getAuth, getPushToken, savePushToken]);
 
   useEffect(() => {
     notificationListener.current = Notifications.addNotificationReceivedListener(
@@ -78,13 +90,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  // Automate registration when user logs in
+  // Automate registration when user logs in or app launches with user
   useEffect(() => {
-    if (user && !expoPushToken) {
-      // We could automatically register or wait for user to click something
-      // For now let's just expose the register function
+    if (user) {
+      register();
     }
-  }, [user, expoPushToken]);
+  }, [user]);
 
   return (
     <NotificationContext.Provider value={{ expoPushToken, notification, register }}>

@@ -3,14 +3,15 @@ import { View } from "react-native";
 import { Text, IconButton, Avatar, useTheme } from "react-native-paper";
 import { useDesignSystem } from "../../contexts/DesignSystemContext";
 
+import { useAuth } from "../../contexts/AuthContext";
+
 export default function HomeHeader() {
   const theme = useTheme();
   const { design } = useDesignSystem();
+  const { user } = useAuth();
 
-  const dummyUser = {
-    name: "Aiman Zulkifli",
-    id: "EMP-10241",
-  };
+  const displayName = user?.name || "Guest User";
+  const displayId = user?.id ? `ID: ${user.id}` : "Not logged in";
 
   return (
     <View
@@ -41,7 +42,7 @@ export default function HomeHeader() {
             fontFamily: "ComicNeue_700Bold",
           }}
         >
-          {dummyUser.name}
+          {displayName}
         </Text>
 
         <Text
@@ -52,7 +53,7 @@ export default function HomeHeader() {
             marginTop: 2,
           }}
         >
-          {dummyUser.id}
+          {displayId}
         </Text>
       </View>
 
@@ -72,11 +73,12 @@ export default function HomeHeader() {
 
         <Avatar.Text
           size={40}
-          label={dummyUser.name
+          label={displayName
             .split(" ")
             .map((n) => n[0])
             .join("")
-            .slice(0, 2)}
+            .slice(0, 2)
+            .toUpperCase()}
           style={{
             backgroundColor: theme.colors.primary,
           }}
